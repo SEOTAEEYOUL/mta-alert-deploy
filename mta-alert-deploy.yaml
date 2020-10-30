@@ -1,0 +1,87 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mta-alert
+    # ver: 1.0.0
+    # component: mta-alert
+  name: mta-alert
+  namespace: mta-infra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mta-alert
+      # ver: 1.0.0
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: mta-alert
+        # ver: 1.0.0
+        # component: mta-alert
+    spec:
+      tolerations:
+      - key: "dedicated"
+        operator: "Exists"
+        effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - "worker"
+      containers:
+      - name: mta-alert
+        image: harbor.skmta.net/mta-infra/mta-alert:0.6.4
+        imagePullPolicy: Always
+        env:
+        - name: UV_THREADPOOL_SIZE
+          value: "8"
+        - name: CLUSTER_NAME
+          value: "cluster.local"
+        - name: SLACK_API_TOKEN
+          value: "xoxb-1219098448230-1257217978624-QsnbONsMnzanNACxQBWtkScb"
+        - name: SLACK_WEBHOOK
+          # value: "https://hooks.slack.com/services/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"
+          value: "https://hooks.slack.com/services/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"
+        - name: SLACK_USER_NAME
+          value: "Multi-Tenancy Alert"
+        - name: SLACK_CHANNEL
+          value: "default"
+        - name: ENV
+          value: "dev"
+        - name: SNS_USER
+          value: "MTA_SMS"
+        - name: AWS_ACCESS_KEY_ID
+          value: "AKIAY6G7SM4GPY63XJ2L"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "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"
+        ports:
+        - containerPort: 8080
+          name: mta-alert
+        readinessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 15
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
